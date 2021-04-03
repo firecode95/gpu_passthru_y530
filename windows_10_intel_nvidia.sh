@@ -1,0 +1,65 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cp /home/firecode95/.config/pulse/cookie /root/.config/pulse/cookie
+/usr/bin/qemu-system-x86_64 \
+-name guest=windows10 \
+-machine q35,accel=kvm,vmport=off,kernel_irqchip=on \
+-cpu host,hv_time,kvm=off,hv-relaxed,hv-vapic,kvm-asyncpf-int,topoext,host-cache-info=on,check,hv_stimer,hv_synic,hv_vpindex,-hypervisor,hv_spinlocks=0x1fff,hv_vapic \
+-enable-kvm \
+-drive if=pflash,format=raw,readonly=on,file=$DIR/OVMF_CODE.fd \
+-drive if=pflash,format=raw,file=$DIR/OVMF_VARS.fd \
+-smp 12,sockets=1,dies=1,cores=6,threads=2 \
+-m 6G \
+-uuid e7d44285-507b-48da-bfe2-2eba415016bd \
+-no-user-config \
+-nodefaults \
+-no-hpet \
+-rtc base=localtime \
+-global PIIX4_PM.disable_s3=0 \
+-global ICH9-LPC.disable_s3=1 \
+-global ICH9-LPC.disable_s4=1 \
+-global isa-debugcon.iobase=0x402 \
+-debugcon file:/tmp/windows_10.ovmf.log \
+-monitor stdio \
+-boot menu=on,strict=on \
+-device pcie-root-port,port=0x0,chassis=1,id=pci.1,bus=pcie.0,multifunction=on,addr=0x1 \
+-device pcie-root-port,port=0x9,chassis=2,id=pci.2,bus=pcie.0,addr=0x1.0x1 \
+-device pcie-root-port,port=0xa,chassis=3,id=pci.3,bus=pcie.0,addr=0x1.0x2 \
+-device pcie-root-port,port=0xb,chassis=4,id=pci.4,bus=pcie.0,addr=0x1.0x3 \
+-device pcie-root-port,port=0xc,chassis=5,id=pci.5,bus=pcie.0,addr=0x1.0x4 \
+-device pcie-root-port,port=0xd,chassis=6,id=pci.6,bus=pcie.0,addr=0x1.0x5 \
+-device i82801b11-bridge,id=pci.7,bus=pcie.0,addr=0x1e \
+-device pci-bridge,chassis_nr=8,id=pci.8,bus=pci.7,addr=0x0 \
+-device ich9-usb-ehci1,id=usb,bus=pcie.0,addr=0x1d.0x7 \
+-device ich9-usb-uhci1,masterbus=usb.0,firstport=0,bus=pcie.0,multifunction=on,addr=0x1d \
+-device ich9-usb-uhci2,masterbus=usb.0,firstport=2,bus=pcie.0,addr=0x1d.0x1 \
+-device ich9-usb-uhci3,masterbus=usb.0,firstport=4,bus=pcie.0,addr=0x1d.0x2 \
+-device virtio-serial-pci,id=virtio-serial0,bus=pci.3,addr=0x0 \
+-object iothread,id=iothread0 \
+-device virtio-scsi-pci,iothread=iothread0,num_queues=8,id=scsi0,bus=pcie.0,addr=0x3 \
+-drive file=$DIR/virtio-win-0.1.185.iso,media=cdrom,bus=2 \
+-drive if=none,id=hd1,file=$DIR/$1.qcow2,format=qcow2,cache.direct=on,discard=unmap,aio=threads \
+-device scsi-hd,drive=hd1 \
+-object input-linux,id=kbd1,evdev=/dev/input/by-path/platform-i8042-serio-0-event-kbd,grab_all=on,repeat=on \
+-acpitable file=$DIR/SSDT1.dat \
+-msg timestamp=on \
+-netdev type=tap,id=net0,ifname=tap0,script=$DIR/tap_ifup,downscript=$DIR/tap_ifdown,vhost=on \
+-device virtio-net-pci,netdev=net0,mac=52:54:BE:EF:A1:67,bus=pci.5,addr=0x0 \
+-spice port=5901,addr=127.0.0.1,disable-ticketing \
+-device virtserialport,bus=virtio-serial0.0,nr=1,chardev=charchannel0,id=channel0,name=com.redhat.spice.0 \
+-display gtk,gl=on \
+-device vfio-pci,id=hostdev2,driver=vfio-pci-nohotplug,romfile=/sys/devices/pci0000:00/0000:00:02.0/gvt_firmware,sysfsdev=/sys/bus/mdev/devices/1ae40c36-b180-4af0-8fab-c27de21f597d,x-igd-opregion=on,ramfb=on,display=on,xres=1920,yres=1080,bus=pcie.0,multifunction=on,addr=0x2 \
+-device vfio-pci,host=0000:01:00.0,id=hostdev0,bus=pci.1,multifunction=on,addr=0x0,x-pci-sub-vendor-id=0x17aa,x-pci-sub-device-id=0x39fd \
+-device vfio-pci,host=0000:01:00.1,id=hostdev1,bus=pci.1,addr=0x0.0x1 \
+-chardev pty,id=charserial0 \
+-device isa-serial,chardev=charserial0,id=serial0 \
+-chardev spicevmc,id=charchannel0,name=vdagent \
+-chardev spicevmc,id=charredir0,name=usbredir \
+-device usb-redir,chardev=charredir0,id=redir0,bus=usb.0,port=1 \
+-chardev spicevmc,id=charredir1,name=usbredir \
+-device usb-redir,chardev=charredir1,id=redir1,bus=usb.0,port=2 \
+-chardev spicevmc,id=charredir2,name=usbredir \
+-device usb-redir,chardev=charredir2,id=redir2,bus=usb.0,port=3 \
+-device ich9-intel-hda \
+-device hda-micro,audiodev=hda \
+-audiodev pa,id=hda,server=/run/user/1000/pulse/native
