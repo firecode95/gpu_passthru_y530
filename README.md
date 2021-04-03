@@ -46,5 +46,6 @@ GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet modprobe.blacklist=nouveau modprobe
 
 ## Usage:
 
-Run script with: sudo ./windows_10_intel_nvidia.sh win10_uefi
+Run script with:
+<pre>sudo ./windows_10_intel_nvidia.sh win10_uefi</pre>
 where parameter is your qcow2 img name in same folder as this script
